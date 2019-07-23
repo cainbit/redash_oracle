@@ -1,4 +1,4 @@
-FROM redash/redash:latest
+FROM redash/redash:7.0.0.b18042
 
 USER root
 
