@@ -1,29 +1,49 @@
-redash:
-  image: redash_oracle 
-  ports:
-    - "5000:5000"
-  links:
-    - redis
-    - postgres
-  environment:
-    REDASH_STATIC_ASSETS_PATH: "../rd_ui/dist/"
-    REDASH_LOG_LEVEL: "INFO"
-    REDASH_REDIS_URL: "redis://redis:6379/0"
-    REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
-    REDASH_COOKIE_SECRET: veryverysecret
-    REDASH_MAIL_SERVER: "smtp01.b2wdigital.com" # default: localhost
-    REDASH_MAIL_DEFAULT_SENDER: "joao.leite@b2wdigital.com" # Email address to send from
-redis:
-  image: redis:2.8
-postgres:
-  image: postgres:9.3
-  ports:
-    - "5432:5432"
-  volumes:
-   - /opt/postgres-data:/var/lib/postgresql/data
-redash-nginx:
-  image: redash/nginx:latest
-  ports:
-    - "80:80"
-  links:
-    - redash
+version: '3'
+services:
+  server:
+    image: dalongrong/redash-oracle:7.0.0.b18042
+    command: server
+    env_file: ./opt/redash/env
+    ports:
+      - "5000:5000"
+    environment:
+      REDASH_WEB_WORKERS: 4
+  scheduler:
+    image: dalongrong/redash-oracle:7.0.0.b18042
+    command: scheduler
+    env_file: ./opt/redash/env
+    environment:
+      QUEUES: "celery"
+      WORKERS_COUNT: 1
+  scheduled_worker:
+    image: dalongrong/redash-oracle:7.0.0.b18042
+    command: worker
+    env_file: ./opt/redash/env
+    environment:
+      QUEUES: "scheduled_queries,schemas"
+      WORKERS_COUNT: 1
+  adhoc_worker:
+    image: dalongrong/redash-oracle:7.0.0.b18042
+    command: worker
+    env_file: ./opt/redash/env
+    environment:
+      QUEUES: "queries"
+      WORKERS_COUNT: 2
+  redis:
+    image: redis:5.0-alpine
+    restart: always
+  postgres:
+    image: postgres:9.5-alpine
+    env_file: ./opt/redash/env
+    volumes:
+      - ./opt/redash/postgres-data:/var/lib/postgresql/data
+    restart: always
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
