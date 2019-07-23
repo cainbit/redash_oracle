@@ -10,7 +10,7 @@
 
 ```code
 opt/redash/env
-``
+```
 
 * running
 
